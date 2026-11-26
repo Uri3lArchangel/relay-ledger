@@ -57,7 +57,7 @@ Integration tests use a fresh schema per case, including competing connections a
 - Claim and completion serialize by row lock; claim and attempt insert commit together, and completion and attempt close commit together. Concurrent producers use the unique key and a fresh READ COMMITTED snapshot after conflict.
 - The queue is optimized for a small active working set. If dispatch throughput were the goal, measure connection pooling, claims in batches, write contention, and vacuum pressure before replacing the database with a broker.
 - The delivery state is inspectable via a status endpoint. Pending, expired and exhausted attempts remain traceable in the database for a postmortem.
-- Portfolio prototype, initially implemented with AI assistance. It is not claimed as previous employment, production adoption, or unassisted work.
+- Portfolio prototype. The results below come from local testing, not production usage.
 
 
 ### Recorded local run
