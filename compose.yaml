@@ -1,0 +1,50 @@
+x-relay: &relay
+  build:
+    context: .
+    dockerfile: Containerfile
+  environment:
+    DATABASE_URL: postgresql://relay:demo@pg/relay
+    LEDGER_TOKEN: local-demo-token-change-me
+    RELAY_SIGNING_SECRET: demo-only-please-change-this-signing-secret
+    RELAY_DESTINATION: http://receiver:8081/events
+    RELAY_RECEIPTS: /data/receipts.sqlite3
+
+services:
+  pg:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: relay
+      POSTGRES_USER: relay
+      POSTGRES_PASSWORD: demo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U relay -d relay"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+  migrate:
+    <<: *relay
+    command: ["python", "-m", "relayledger", "migrate"]
+    depends_on:
+      pg: {condition: service_healthy}
+  api:
+    <<: *relay
+    command: ["uvicorn", "relayledger.api:create_app", "--factory", "--host", "0.0.0.0"]
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  worker:
+    <<: *relay
+    command: ["python", "-m", "relayledger", "worker"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      receiver: {condition: service_started}
+  receiver:
+    <<: *relay
+    command: ["uvicorn", "relayledger.receiver:app", "--host", "0.0.0.0", "--port", "8081"]
+    volumes: ["receipts:/data"]
+
+volumes:
+  pgdata:
+  receipts:
+
